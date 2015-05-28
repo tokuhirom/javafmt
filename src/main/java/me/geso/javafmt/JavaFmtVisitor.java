@@ -984,7 +984,9 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		printer.print("new ");
 
 		printTypeArgs(n.getTypeArgs(), arg);
-		printer.print(" ");
+		if (!isNullOrEmpty(n.getTypeArgs())) {
+			printer.print(" ");
+		}
 
 		n.getType().accept(this, arg);
 
