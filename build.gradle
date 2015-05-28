@@ -1,0 +1,12 @@
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'org.slf4j:slf4j-api:1.7.12'
+    compile 'com.github.javaparser:javaparser-core:2.1.0'
+    compile 'commons-io:commons-io:2.4'
+    testCompile 'junit:junit:4.12'
+}

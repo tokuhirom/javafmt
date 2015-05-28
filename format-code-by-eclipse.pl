@@ -14,8 +14,8 @@ sub eclipsefmt {
     my $eclipse = find_eclipse();
     system($eclipse,
         '-application', 'org.eclipse.jdt.core.JavaCodeFormatter',
-        '-config', rel2abs('t/org.eclipse.jdt.core.prefs'),
-        (map { rel2abs($_) } @files),
+        '-config', rel2abs('src/test/resources/org.eclipse.jdt.core.prefs'),
+        (map { rel2abs($_) } glob("src/test/resources/src/*.java")),
     );
 }
 
