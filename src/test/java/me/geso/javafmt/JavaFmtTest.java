@@ -16,6 +16,7 @@ public class JavaFmtTest {
 	public void test() throws IOException, ParseException {
 		final String[] files = {
 				"src/Foo.java",
+				"src/SwitchCase.java",
 				"src/JavaFmtVisitor.java"
 		};
 		final JavaFmt javaFmt = new JavaFmt();

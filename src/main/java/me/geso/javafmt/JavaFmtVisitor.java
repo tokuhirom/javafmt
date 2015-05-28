@@ -1259,15 +1259,13 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 	@Override
 	public void visit(final SwitchStmt n, final Object arg) {
 		printJavaComment(n.getComment(), arg);
-		printer.print("switch(");
+		printer.print("switch (");
 		n.getSelector().accept(this, arg);
 		printer.printLn(") {");
 		if (n.getEntries() != null) {
-			printer.indent();
 			for (final SwitchEntryStmt e : n.getEntries()) {
 				e.accept(this, arg);
 			}
-			printer.unindent();
 		}
 		printer.print("}");
 
