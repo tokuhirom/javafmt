@@ -25,6 +25,8 @@ package me.geso.javafmt;
 import static com.github.javaparser.PositionUtils.sortByBeginPosition;
 import static com.github.javaparser.ast.internal.Utils.isNullOrEmpty;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -145,9 +147,10 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 
 		private int level = 0;
 
-		private boolean indented = false;
-
 		private final StringBuilder buf = new StringBuilder();
+		private final List<String> tokens = new ArrayList<>();
+		private int maxCharsPerLine = 80;
+		private int tabWidth = 4;
 
 		public void indent() {
 			level++;
@@ -159,16 +162,15 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 
 		private void makeIndent() {
 			for (int i = 0; i < level; i++) {
-				buf.append("\t");
+				tokens.add("\t");
 			}
 		}
 
 		public void print(final String arg) {
-			if (!indented) {
+			if (tokens.isEmpty()) {
 				makeIndent();
-				indented = true;
 			}
-			buf.append(arg);
+			tokens.add(arg);
 		}
 
 		public void printLn(final String arg) {
@@ -177,11 +179,80 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		}
 
 		public void printLn() {
+			finalizeTokens();
 			buf.append("\n");
-			indented = false;
+		}
+
+		private void finalizeTokens() {
+			// wrap lines
+
+			String joined = String.join("", tokens);
+			if (joined.length() < maxCharsPerLine) {
+				buf.append(joined);
+			} else {
+				ArrayList<String> grouped = new ArrayList<>();
+				StringBuilder builder = new StringBuilder();
+				for (int i = 0; i < tokens.size(); i++) {
+					String token = tokens.get(i);
+					if (", ".equals(token)) {
+						builder.append(",");
+						grouped.add(builder.toString());
+						builder = new StringBuilder();
+					} else {
+						builder.append(token);
+					}
+				}
+				if (builder.length() > 0) {
+					grouped.add(builder.toString());
+				}
+
+				StringBuilder current = new StringBuilder();
+				boolean wrapped = false;
+				for (int i = 0; i < grouped.size() - 1; i++) {
+					String token = grouped.get(i);
+					if (wrapped) {
+						buf.append(token);
+						buf.append("\n");
+						for (int j = 0; j < level; ++j) {
+							buf.append("\t");
+						}
+						buf.append("\t");
+						buf.append("\t");
+					} else {
+						String next = grouped.get(i + 1);
+						current.append(token);
+						if (getWidth(current.toString()) + next.length() + 1 > maxCharsPerLine) {
+							buf.append(current.toString());
+							buf.append("\n");
+							for (int j = 0; j < level; ++j) {
+								buf.append("\t");
+							}
+							buf.append("\t");
+							buf.append("\t");
+							current = new StringBuilder();
+							wrapped = true;
+						} else {
+							current.append(" ");
+							current.append(token);
+						}
+					}
+				}
+				buf.append(current.toString());
+				if (grouped.size() > 0) {
+					buf.append(grouped.get(grouped.size() - 1));
+				}
+			}
+			tokens.clear();
+		}
+
+		public long getWidth(String s) {
+			return s.chars()
+					.mapToLong(i -> i == (int)'\t' ? tabWidth : 1)
+					.sum();
 		}
 
 		public String getSource() {
+			finalizeTokens();
 			return buf.toString();
 		}
 

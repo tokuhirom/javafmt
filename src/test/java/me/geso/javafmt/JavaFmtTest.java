@@ -17,6 +17,8 @@ public class JavaFmtTest {
 		final String[] files = {
 				"src/Foo.java",
 				"src/SwitchCase.java",
+				"src/MethodParameters.java",
+				"src/Field.java",
 				"src/JavaFmtVisitor.java"
 		};
 		final JavaFmt javaFmt = new JavaFmt();
