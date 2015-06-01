@@ -129,7 +129,7 @@ import com.github.javaparser.ast.visitor.VoidVisitor;
  *
  * @author Julio Vilmar Gesser
  */
-public final class JavaFmtVisitor implements VoidVisitor<Object> {
+public final class JavaFmtVisitor2 implements VoidVisitor<Object> {
 
 	private boolean printComments;
 

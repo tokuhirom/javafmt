@@ -26,7 +26,6 @@ import static com.github.javaparser.PositionUtils.sortByBeginPosition;
 import static com.github.javaparser.ast.internal.Utils.isNullOrEmpty;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -131,7 +130,7 @@ import com.github.javaparser.ast.visitor.VoidVisitor;
  *
  * @author Julio Vilmar Gesser
  */
-public final class JavaFmtVisitor implements VoidVisitor<Object> {
+public class JavaFmtVisitor implements VoidVisitor<Object> {
 
 	private boolean printComments;
 
@@ -151,6 +150,8 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		private final List<String> tokens = new ArrayList<>();
 		private int maxCharsPerLine = 80;
 		private int tabWidth = 4;
+		private String indentChar = "\t";
+		private boolean printingParameters = false;
 
 		public void indent() {
 			level++;
@@ -162,7 +163,7 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 
 		private void makeIndent() {
 			for (int i = 0; i < level; i++) {
-				tokens.add("\t");
+				tokens.add(indentChar);
 			}
 		}
 
@@ -187,7 +188,7 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 			// wrap lines
 
 			String joined = String.join("", tokens);
-			if (joined.length() < maxCharsPerLine) {
+			if (getWidth(joined) <= maxCharsPerLine) {
 				buf.append(joined);
 			} else {
 				ArrayList<String> grouped = new ArrayList<>();
@@ -198,6 +199,11 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 						builder.append(",");
 						grouped.add(builder.toString());
 						builder = new StringBuilder();
+					} else if (".".equals(token)) {
+						// wrap before method call
+						grouped.add(builder.toString());
+						builder = new StringBuilder();
+						builder.append(".");
 					} else {
 						builder.append(token);
 					}
@@ -210,29 +216,31 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 				boolean wrapped = false;
 				for (int i = 0; i < grouped.size() - 1; i++) {
 					String token = grouped.get(i);
-					if (wrapped) {
+					if (wrapped && printingParameters) {
 						buf.append(token);
 						buf.append("\n");
 						for (int j = 0; j < level; ++j) {
-							buf.append("\t");
+							buf.append(indentChar);
 						}
-						buf.append("\t");
-						buf.append("\t");
+						buf.append(indentChar);
+						buf.append(indentChar);
 					} else {
 						String next = grouped.get(i + 1);
-						current.append(token);
-						if (getWidth(current.toString()) + next.length() + 1 > maxCharsPerLine) {
+						if (getWidth(current.toString()) + getWidth(token) + next.length() + 1 > maxCharsPerLine) {
 							buf.append(current.toString());
+							buf.append(token);
 							buf.append("\n");
 							for (int j = 0; j < level; ++j) {
 								buf.append("\t");
 							}
-							buf.append("\t");
-							buf.append("\t");
+							buf.append(indentChar);
+							buf.append(indentChar);
 							current = new StringBuilder();
 							wrapped = true;
 						} else {
-							current.append(" ");
+							if (next.startsWith(";")) {
+								current.append(" ");
+							}
 							current.append(token);
 						}
 					}
@@ -242,6 +250,7 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 					buf.append(grouped.get(grouped.size() - 1));
 				}
 			}
+			printingParameters = false;
 			tokens.clear();
 		}
 
@@ -259,6 +268,10 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		@Override
 		public String toString() {
 			return getSource();
+		}
+
+		public void setPrintingParameters(final boolean printingParameters) {
+			this.printingParameters = printingParameters;
 		}
 	}
 
@@ -1195,6 +1208,7 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 				}
 			}
 		}
+
 		if (n.getBody() == null) {
 			printer.print(";");
 		} else {
@@ -1205,6 +1219,8 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 
 	@Override
 	public void visit(final Parameter n, final Object arg) {
+		printer.setPrintingParameters(true);
+
 		printJavaComment(n.getComment(), arg);
 		printAnnotations(n.getAnnotations(), arg);
 		printModifiers(n.getModifiers());
@@ -1559,8 +1575,9 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		if (n.getCompare() != null) {
 			n.getCompare().accept(this, arg);
 		}
-		printer.print("; ");
+		printer.print(";");
 		if (n.getUpdate() != null) {
+			printer.print(" ");
 			for (final Iterator<Expression> i = n.getUpdate().iterator(); i.hasNext(); ) {
 				final Expression e = i.next();
 				e.accept(this, arg);
@@ -1742,8 +1759,7 @@ public final class JavaFmtVisitor implements VoidVisitor<Object> {
 		printJavaComment(n.getComment(), arg);
 
 		List<Parameter> parameters = n.getParameters();
-		boolean printPar = false;
-		printPar = n.isParametersEnclosed();
+		boolean printPar = n.isParametersEnclosed();
 
 		if (printPar) {
 			printer.print("(");
